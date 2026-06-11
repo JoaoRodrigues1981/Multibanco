@@ -93,7 +93,9 @@ namespace Multibanco._03Dados
                 NpgsqlDataReader oReader = oCmd.ExecuteReader();
 
                 if (oReader.Read())
+                
                     mbway = oReader.GetBoolean(0);
+                    //MessageBox.Show(Convert.ToString(mbway)); //control de variavel para testes
 
                 oReader.Close();
                 oConexao.desConectar();

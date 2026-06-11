@@ -47,7 +47,6 @@ namespace Multibanco._01Apresentacao
             txtNovoPin.PlaceholderText = "novo pin...";
             txtNovoPin.Size = new Size(396, 39);
             txtNovoPin.TabIndex = 12;
-            txtNovoPin.TextChanged += txtNovoPin_TextChanged;
             //
             // txtConta
             //
@@ -98,7 +97,6 @@ namespace Multibanco._01Apresentacao
             txtConfPin.PlaceholderText = "confirmar pin...";
             txtConfPin.Size = new Size(396, 39);
             txtConfPin.TabIndex = 13;
-            txtConfPin.TextChanged += txtConfPin_TextChanged_1;
             //
             // btnOK
             //

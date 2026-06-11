@@ -115,7 +115,7 @@ namespace Multibanco._03Dados
 
         // Nota: fObterSaldo não existe aqui intencionalmente.
         // Já existe em cMovimento — duplicar seria ter a mesma query em dois sítios.
-        // O cControlo uGsa cMovimento.fObterSaldo antes de chamar fEliminarCredencial.
+        // O cControlo usa cMovimento.fObterSaldo antes de chamar fEliminarCredencial.
 
         // ------------------------------------------------------------------
         // Ativa ou desativa o MBWay de uma conta pelo seu Id.
@@ -146,6 +146,22 @@ namespace Multibanco._03Dados
 
             if (fExecutarNonQuery(oCmd, "Erro ao eliminar cliente: "))
                 mensagem = "Cliente eliminado com sucesso.";
+
+            return operacao;
+        }
+
+        // ------------------------------------------------------------------
+        // Desbloqueia uma conta bloqueada pelo Id — reset às tentativas e Bloqueada = FALSE.
+        // Só deve ser chamado pelo administrador "sibs" no BackOffice.
+        // ------------------------------------------------------------------
+        public bool fDesbloquearConta(int id)
+        {
+            NpgsqlCommand oCmd = new NpgsqlCommand();
+            oCmd.Parameters.AddWithValue("@Id", id);
+            oCmd.CommandText = "UPDATE Credenciais SET Tentativas = 0, Bloqueada = FALSE WHERE Id = @Id";
+
+            if (fExecutarNonQuery(oCmd, "Erro ao desbloquear conta: "))
+                mensagem = "Conta desbloqueada com sucesso.";
 
             return operacao;
         }

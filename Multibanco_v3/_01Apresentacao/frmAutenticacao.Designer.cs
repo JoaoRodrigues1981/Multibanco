@@ -77,7 +77,6 @@
             txtConta.Size = new Size(396, 39);
             txtConta.TabIndex = 6;
             txtConta.KeyPress += txtConta_KeyPress;
-            txtConta.KeyUp += txtConta_KeyUp;
             // 
             // txtPin
             // 
@@ -135,7 +134,6 @@
             Controls.Add(label1);
             Name = "frmAutenticacao";
             Text = "v";
-            Load += frmAutenticacao_Load;
             ResumeLayout(false);
             PerformLayout();
         }

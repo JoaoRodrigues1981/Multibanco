@@ -55,6 +55,7 @@ namespace Multibanco
                 e.Handled = true;
         }
 
+        // Botão "Pagar" — valida os campos, executa o pagamento e fecha o formulário com OK
         private void btnPagar_Click(object sender, EventArgs e)
         {
             if (lstServicos.SelectedIndex < 0)
@@ -101,6 +102,7 @@ namespace Multibanco
             }
         }
 
+        // Botão "Cancelar" — fecha o formulário sem efetuar pagamento
         private void btnCancelar_Click(object sender, EventArgs e)
         {
             DialogResult = DialogResult.Cancel;

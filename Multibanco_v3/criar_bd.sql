@@ -30,18 +30,21 @@ CREATE TABLE Admins (
 -- =============================================================
 -- TABELA: Credenciais
 -- Cada linha é uma conta bancária (como estava em aula).
--- Colunas novas face à versão anterior: Saldo, MBWay.
+-- Colunas novas face à versão anterior: Saldo, MBWay, Telefone.
 -- Um cliente com várias contas tem várias linhas
 -- (mesmo Banco + Cliente, diferente Conta).
 -- =============================================================
 CREATE TABLE Credenciais (
-    Id      SERIAL         PRIMARY KEY,
-    Banco   VARCHAR(50)    NOT NULL,
-    Cliente VARCHAR(100)   NOT NULL,
-    Conta   INTEGER        NOT NULL UNIQUE,
-    Pin     INTEGER        NOT NULL,
-    Saldo   DECIMAL(10,2)  NOT NULL DEFAULT 0.00,
-    MBWay   BOOLEAN        NOT NULL DEFAULT FALSE
+    Id          SERIAL         PRIMARY KEY,
+    Banco       VARCHAR(50)    NOT NULL,
+    Cliente     VARCHAR(100)   NOT NULL,
+    Conta       INTEGER        NOT NULL UNIQUE,
+    Pin         INTEGER        NOT NULL,
+    Saldo       DECIMAL(10,2)  NOT NULL DEFAULT 0.00,
+    MBWay       BOOLEAN        NOT NULL DEFAULT FALSE,
+    Telefone    VARCHAR(9)    CHECK (Telefone IS NULL OR Telefone ~ '^[0-9]{9}$'),
+    Tentativas  INTEGER        NOT NULL DEFAULT 0,
+    Bloqueada   BOOLEAN        NOT NULL DEFAULT FALSE
 );
 
 -- =============================================================
@@ -100,11 +103,18 @@ INSERT INTO Admins (Username, Pin) VALUES
 -- Contas de clientes
 -- João Silva tem 2 contas (para testar múltiplas contas por cliente)
 -- Maria Santos tem MBWay ativo (para testar receção MBWay)
-INSERT INTO Credenciais (Banco, Cliente, Conta, Pin, Saldo, MBWay) VALUES
-    ('CGD', 'João Silva',   123456, 1234,  850.00, FALSE),  -- Id = 1
-    ('CGD', 'João Silva',   123457, 1234,  200.00, FALSE),  -- Id = 2 (segunda conta)
-    ('BPI', 'Maria Santos', 654321, 4321, 1500.00, TRUE),   -- Id = 3 (MBWay ativo)
-    ('BCP', 'Rui Costa',    111222, 9999,  300.00, FALSE);  -- Id = 4
+-- Ana Lima tem MBWay ativo (conta de reserva para testes MBWay — não participar nos testes T61-T63)
+INSERT INTO Credenciais (Banco, Cliente, Conta, Pin, Saldo, MBWay, Telefone) VALUES
+    ('CGD', 'João Silva',   123456, 1234,  850.00, FALSE, '912345001'),  -- Id = 1
+    ('CGD', 'João Silva',   123457, 1234,  200.00, FALSE, '912345002'),  -- Id = 2 (segunda conta)
+    ('BPI', 'Maria Santos', 654321, 4321, 1500.00, TRUE,  '963215001'),  -- Id = 3 (MBWay ativo — usar em T38; toggle em T63/T64)
+    ('BCP', 'Rui Costa',    111222, 9999,  300.00, FALSE, '935671001'),  -- Id = 4 (MBWay inativo — usar em T33 e T61)
+    ('BES', 'Ana Lima',     777888, 5555,  500.00, TRUE,  '916780001'),  -- Id = 5 (MBWay ativo — conta de reserva para T38 se T63 já tiver corrido)
+    ('Santander', 'Carlos Mendes',   222333, 2233,  750.00, TRUE,  '961234567'),  -- Id = 6
+    ('Millennium', 'Sofia Pereira',  444555, 4455, 1200.00, TRUE,  '936789012'),  -- Id = 7
+    ('Novo Banco', 'Miguel Ferreira',666777, 6677,  450.00, FALSE, '912398765'),  -- Id = 8
+    ('Santander', 'Inês Oliveira',   888999, 8899, 2000.00, TRUE,  '964321987'),  -- Id = 9
+    ('CGD', 'Tiago Rodrigues',       321654, 3216,  100.00, FALSE, '935678901');  -- Id = 10
 
 -- Movimentos de teste
 INSERT INTO Movimentos (ContaId, Tipo, Valor, SaldoApos, DataHora, Descricao) VALUES
@@ -112,4 +122,5 @@ INSERT INTO Movimentos (ContaId, Tipo, Valor, SaldoApos, DataHora, Descricao) VA
     (1, 'D', 400.00,  900.00,  '2026-04-10 14:30:00', 'Depósito salário'),
     (1, 'L',  50.00,  850.00,  '2026-05-01 11:00:00', 'Levantamento'),
     (3, 'D', 1500.00, 1500.00, '2026-04-01 09:00:00', 'Depósito inicial'),
-    (4, 'D',  300.00,  300.00, '2026-04-01 09:00:00', 'Depósito inicial');
+    (4, 'D',  300.00,  300.00, '2026-04-01 09:00:00', 'Depósito inicial'),
+    (5, 'D',  500.00,  500.00, '2026-04-01 09:00:00', 'Depósito inicial');

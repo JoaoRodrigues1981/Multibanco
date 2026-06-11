@@ -17,6 +17,9 @@ namespace Multibanco
 
         private void InitializeComponent()
         {
+            components = new System.ComponentModel.Container();
+            tmrRelogio = new System.Windows.Forms.Timer(components);
+            lblRelogio = new Label();
             lblBanco = new Label();
             lblCliente = new Label();
             label1 = new Label();
@@ -44,6 +47,21 @@ namespace Multibanco
             grpHistorico.SuspendLayout();
             SuspendLayout();
             // 
+            // tmrRelogio
+            // 
+            tmrRelogio.Enabled = true;
+            tmrRelogio.Interval = 1000;
+            tmrRelogio.Tick += tmrRelogio_Tick;
+            // 
+            // lblRelogio
+            // 
+            lblRelogio.Font = new Font("Segoe UI", 9F);
+            lblRelogio.Location = new Point(543, 395);
+            lblRelogio.Name = "lblRelogio";
+            lblRelogio.Size = new Size(265, 22);
+            lblRelogio.TabIndex = 19;
+            lblRelogio.TextAlign = ContentAlignment.MiddleRight;
+            // 
             // lblBanco
             // 
             lblBanco.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
@@ -66,12 +84,11 @@ namespace Multibanco
             // 
             label1.Font = new Font("Segoe UI", 30F, FontStyle.Bold);
             label1.ForeColor = Color.DarkRed;
-            label1.Location = new Point(271, 28);
+            label1.Location = new Point(247, 28);
             label1.Name = "label1";
             label1.Size = new Size(319, 59);
             label1.TabIndex = 2;
             label1.Text = "MULTIBANCO";
-            label1.Click += label1_Click;
             // 
             // lblSaldo
             // 
@@ -98,7 +115,7 @@ namespace Multibanco
             // lblMontante
             // 
             lblMontante.Font = new Font("Segoe UI", 9F);
-            lblMontante.Location = new Point(160, 86);
+            lblMontante.Location = new Point(164, 101);
             lblMontante.Name = "lblMontante";
             lblMontante.Size = new Size(105, 14);
             lblMontante.TabIndex = 16;
@@ -108,16 +125,16 @@ namespace Multibanco
             // 
             txtValor.Font = new Font("Segoe UI", 18F);
             txtValor.ForeColor = Color.Yellow;
-            txtValor.Location = new Point(160, 109);
+            txtValor.Location = new Point(285, 89);
             txtValor.Margin = new Padding(3, 2, 3, 2);
             txtValor.Name = "txtValor";
-            txtValor.Size = new Size(492, 39);
+            txtValor.Size = new Size(367, 39);
             txtValor.TabIndex = 5;
             // 
             // lblContaDestino
             // 
             lblContaDestino.Font = new Font("Segoe UI", 9F);
-            lblContaDestino.Location = new Point(285, 164);
+            lblContaDestino.Location = new Point(164, 164);
             lblContaDestino.Name = "lblContaDestino";
             lblContaDestino.Size = new Size(96, 15);
             lblContaDestino.TabIndex = 14;
@@ -125,10 +142,10 @@ namespace Multibanco
             // 
             // txtContaDestino
             // 
-            txtContaDestino.Location = new Point(387, 161);
+            txtContaDestino.Location = new Point(285, 161);
             txtContaDestino.Margin = new Padding(3, 2, 3, 2);
             txtContaDestino.Name = "txtContaDestino";
-            txtContaDestino.Size = new Size(123, 23);
+            txtContaDestino.Size = new Size(96, 23);
             txtContaDestino.TabIndex = 15;
             // 
             // btnLevantar
@@ -229,7 +246,7 @@ namespace Multibanco
             grpHistorico.Margin = new Padding(3, 2, 3, 2);
             grpHistorico.Name = "grpHistorico";
             grpHistorico.Padding = new Padding(3, 2, 3, 2);
-            grpHistorico.Size = new Size(492, 158);
+            grpHistorico.Size = new Size(492, 152);
             grpHistorico.TabIndex = 13;
             grpHistorico.TabStop = false;
             grpHistorico.Text = "Histórico de Movimentos";
@@ -308,7 +325,7 @@ namespace Multibanco
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(839, 426);
+            ClientSize = new Size(832, 434);
             Controls.Add(lblSaldo);
             Controls.Add(txtSaldo);
             Controls.Add(btnSair);
@@ -326,6 +343,7 @@ namespace Multibanco
             Controls.Add(label1);
             Controls.Add(lblCliente);
             Controls.Add(lblBanco);
+            Controls.Add(lblRelogio);
             Margin = new Padding(3, 2, 3, 2);
             Name = "frmMultibanco";
             Text = "Multibanco";
@@ -361,5 +379,7 @@ namespace Multibanco
         private Button         btnTodos;
         private Label          lblContaDestino;
         private TextBox        txtContaDestino;
+        private System.Windows.Forms.Timer tmrRelogio;
+        private Label          lblRelogio;
     }
 }

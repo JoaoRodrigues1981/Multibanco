@@ -24,6 +24,7 @@ namespace Multibanco
             return (decimal)Math.Round(pmt, 2);
         }
 
+        // Botão "Calcular" — valida os campos e apresenta os resultados para as duas modalidades
         private void btnCalcular_Click(object sender, EventArgs e)
         {
             // Validar valor do empréstimo
@@ -97,6 +98,7 @@ namespace Multibanco
             lblCusto_F.Text = totalFixo.ToString("F2")     + " €";
         }
 
+        // Botão "Fechar" — fecha o simulador e regressa ao ecrã principal
         private void btnFechar_Click(object sender, EventArgs e)
         {
             Close();

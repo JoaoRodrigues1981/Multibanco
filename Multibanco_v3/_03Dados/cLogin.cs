@@ -39,6 +39,40 @@ namespace Multibanco._03Dados
         // ------------------------------------------------------------------
         public bool fObterCredenciais(string txtBanco, string txtCliente, string txtConta, string txtPin)
         {
+            // PRIMEIRO vamos verificar se a conta está bloqueada antes de tentar o login
+            NpgsqlCommand oCmdBlq = new NpgsqlCommand();
+            oCmdBlq.Parameters.AddWithValue("@Conta", Convert.ToInt32(txtConta));
+            oCmdBlq.CommandText = "SELECT Bloqueada FROM Credenciais WHERE Conta = @Conta";
+
+            try
+            {
+                oCmdBlq.Connection = oConexao.conectar(); // abrir ligação
+                NpgsqlDataReader oVerificarBloqueado = oCmdBlq.ExecuteReader(); // Executa o comando SQL
+
+                if (oVerificarBloqueado.Read() && oVerificarBloqueado.GetBoolean(0))   // ????
+                {
+                    oVerificarBloqueado.Close();
+                    oConexao.desConectar();
+                    oCmdBlq.Dispose();
+                    operacao = false;
+                    existe = false;
+                    mensagem = "Conta bloqueada após 3 tentativas. Contacte o administrador.";
+                    return operacao;
+                }
+
+                oVerificarBloqueado.Close();
+                oConexao.desConectar();
+                oCmdBlq.Dispose();
+            }
+            catch (Exception ex)
+            {
+                operacao = false;
+                mensagem = "Erro de acesso à base de dados: " + ex.Message;
+                return operacao;
+            }
+
+            // SEGUNDO agora que sabemos que não está bloqueadatentamos o login normalmente
+
             oSqlCmd.Parameters.Clear();
             // Parâmetros nomeados evitam SQL Injection — os valores são tratados como texto,
             // não como comandos SQL, mesmo que o utilizador tente escrever código malicioso.
@@ -52,6 +86,7 @@ namespace Multibanco._03Dados
 
             try // "tentar fazer" — se algo correr mal, cai no CATCH
             {
+
                 oSqlCmd.Connection = oConexao.conectar(); // PRIMEIRO temos de abrir ligação
                 oSqlDReader = oSqlCmd.ExecuteReader();    // DEPOIS os comando SQL: executar o SELECT
 
@@ -68,7 +103,7 @@ namespace Multibanco._03Dados
                 }
                 else // não encontrou nenhuma linha → credenciais erradas
                 {
-                    existe   = false; // aqui sim, temos de passar as variaveis de control a False para o cControlo saber que houve um problema
+                    existe = false; // aqui sim, temos de passar as variaveis de control a False para o cControlo saber que houve um problema
                     operacao = false;
                     mensagem = "Credenciais inválidas. Tente novamente.";
                 }
@@ -77,6 +112,34 @@ namespace Multibanco._03Dados
                 oConexao.desConectar(); // fechar ligação (boa prática: fechar sempre após usar)
                 oSqlCmd.Dispose();      // limpar o comando SQL
 
+                // TERCEIRO - vamos gerir as tentativas de login
+
+                // Passo 3 — se login bem-sucedido: reset ao contador
+                if (operacao)
+                {
+                    NpgsqlCommand oCmdReset = new NpgsqlCommand();
+                    oCmdReset.Parameters.AddWithValue("@Id", contaId);
+                    oCmdReset.CommandText = "UPDATE Credenciais SET Tentativas = 0 WHERE Id = @Id";
+                    oCmdReset.Connection = oConexao.conectar();
+                    oCmdReset.ExecuteNonQuery();
+                    oConexao.desConectar();
+                    oCmdReset.Dispose();
+                }
+
+                // Passo 4 — se login falhado: incrementar tentativas e bloquear se chegar a 3
+                if (!operacao)
+                {
+                    NpgsqlCommand oCmdTent = new NpgsqlCommand();
+                    oCmdTent.Parameters.AddWithValue("@Conta", Convert.ToInt32(txtConta));
+                    oCmdTent.CommandText = @"UPDATE Credenciais 
+                                                    SET Tentativas = Tentativas + 1,
+                                                    Bloqueada  = CASE WHEN Tentativas + 1 >= 3 THEN TRUE ELSE Bloqueada END 
+                                                    WHERE Conta = @Conta";
+                    oCmdTent.Connection = oConexao.conectar();
+                    oCmdTent.ExecuteNonQuery();
+                    oConexao.desConectar();
+                    oCmdTent.Dispose();
+                }
             }
             catch (Exception ex) // erro técnico: BD não responde, password errada, etc.
             {

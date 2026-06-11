@@ -28,31 +28,21 @@ namespace Multibanco
         {
             // char.IsLetter → é uma letra (a-z, A-Z)?
             // char.IsControl → é uma tecla de controlo (Backspace, Tab, Enter)?
-            if (!char.IsLetter(e.KeyChar) && !char.IsControl(e.KeyChar))
+            if (!char.IsLetter(e.KeyChar) && !char.IsControl(e.KeyChar) && e.KeyChar != ' ')
             {
                 e.Handled = true; // bloquear a tecla — não aparece no campo
                 MessageBox.Show("Inseriu um número! O campo Banco somente admite letras", "Erro de Inserção!", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        // Evento que corre quando o formulário carrega (abre) — vazio por agora
-        private void frmAutenticacao_Load(object sender, EventArgs e)
-        {
-        }
-
         // Evento de teclado no campo Cliente — bloqueia qualquer tecla que não seja letra
         private void txtCliente_KeyPress(object sender, KeyPressEventArgs e)
         {
-            if (!char.IsLetter(e.KeyChar) && !char.IsControl(e.KeyChar))
+            if (!char.IsLetter(e.KeyChar) && !char.IsControl(e.KeyChar) && e.KeyChar != ' ')
             {
                 e.Handled = true;
                 MessageBox.Show("Inseriu um número! O campo Cliente somente admite letras", "Erro de Inserção!", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-        }
-
-        // Evento KeyUp no campo Conta — vazio (reservado para uso futuro)
-        private void txtConta_KeyUp(object sender, KeyEventArgs e)
-        {
         }
 
         // Evento de teclado no campo Conta — bloqueia qualquer tecla que não seja dígito

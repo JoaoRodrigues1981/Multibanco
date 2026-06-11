@@ -34,6 +34,7 @@ namespace Multibanco._01Apresentacao
             this.btnInserir      = new System.Windows.Forms.Button();
             this.btnEliminar     = new System.Windows.Forms.Button();
             this.btnMBWay        = new System.Windows.Forms.Button();
+            this.btnDesbloquear  = new System.Windows.Forms.Button();
             this.btnSair         = new System.Windows.Forms.Button();
             this.grpInserir.SuspendLayout();
             this.SuspendLayout();
@@ -121,6 +122,12 @@ namespace Multibanco._01Apresentacao
             this.btnMBWay.Size      = new System.Drawing.Size(180, 30);
             this.btnMBWay.Click    += new System.EventHandler(this.btnMBWay_Click);
 
+            // btnDesbloquear
+            this.btnDesbloquear.Text     = "Desbloquear conta";
+            this.btnDesbloquear.Location = new System.Drawing.Point(378, 405);
+            this.btnDesbloquear.Size     = new System.Drawing.Size(150, 30);
+            this.btnDesbloquear.Click   += new System.EventHandler(this.btnDesbloquear_Click);
+
             // btnSair
             this.btnSair.Text     = "Sair";
             this.btnSair.Location = new System.Drawing.Point(587, 405);
@@ -135,6 +142,7 @@ namespace Multibanco._01Apresentacao
             this.Controls.Add(this.grpInserir);
             this.Controls.Add(this.btnEliminar);
             this.Controls.Add(this.btnMBWay);
+            this.Controls.Add(this.btnDesbloquear);
             this.Controls.Add(this.btnSair);
             this.Name = "frmAdmin";
             this.Text = "Multibanco — BackOffice SIBS";
@@ -165,6 +173,7 @@ namespace Multibanco._01Apresentacao
         private System.Windows.Forms.Button    btnInserir;
         private System.Windows.Forms.Button    btnEliminar;
         private System.Windows.Forms.Button    btnMBWay;
+        private System.Windows.Forms.Button    btnDesbloquear;
         private System.Windows.Forms.Button    btnSair;
     }
 }

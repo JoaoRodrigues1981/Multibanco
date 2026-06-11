@@ -10,9 +10,10 @@ namespace Multibanco._02Controlo
     internal class cControlo
     {
         // Resultado da operação — o formulário lê estas variáveis após chamar os métodos
-        public bool    operacao = true;   // false se houve qualquer problema
-        public bool    existe   = true;   // false se as credenciais não foram encontradas
-        public string  mensagem = "";     // texto da mensagem de erro ou sucesso
+        public bool      operacao = true;   // false se houve qualquer problema
+        public bool      existe   = true;   // false se as credenciais não foram encontradas
+        public string    mensagem = "";     // texto da mensagem de erro ou sucesso
+        public bool      mbwayAtivo = false;     // indica se o MBWay está ativo para a conta (usado no acesso ao formulário de MBWay)
 
         // Dados da conta após login com sucesso — passados ao frmMultibanco via construtor
         public int     contaId  = 0;      // Id da linha em Credenciais (chave para Movimentos)
@@ -21,6 +22,9 @@ namespace Multibanco._02Controlo
         public string  cliente  = "";     // Nome do cliente
         public int     conta    = 0;      // Número de conta
 
+        
+        
+        // ======== LISTAS ========
         // Lista de clientes devolvida por fListarCredenciais — lida pelo frmAdmin
         public List<string[]> listaCredenciais = new List<string[]>();
 
@@ -30,8 +34,12 @@ namespace Multibanco._02Controlo
         // Lista de serviços pré-definidos — lida pelo frmPagamentosServicos
         public List<string[]> listaServicos = new List<string[]>();
 
-        // Saldo atualizado após operação — o formulário usa para refrescar o ecrã
-        public decimal saldoAtualizado = 0;
+        // Lista de contas MBWay devolvida por fListarContasMBWay — lida pelo frmMBWay
+        public List<string[]> listaContasMBWay = new List<string[]>();
+
+        
+        
+        //============= VARIÁVEIS AUXILIARES =============
 
         // Verificação básica para clientes normais: algum dos 4 campos está vazio?
         // É chamado antes de tentar ir à base de dados.
@@ -108,6 +116,13 @@ namespace Multibanco._02Controlo
             existe   = oClog.existe;
         }
 
+
+
+        // ========= METODOS DE OPERAÇÕES BANCÁRIAS (cliente no frmMultibanco) ==========
+
+        // Saldo atualizado após operação — o formulário usa para refrescar o ecrã
+        public decimal saldoAtualizado = 0;
+
         // ------------------------------------------------------------------
         // Helper privado — verifica se o saldo é suficiente para a operação.
         // Reutilizado em fLevantar, fTransferir, fMBWay e fPagamento para evitar
@@ -124,35 +139,6 @@ namespace Multibanco._02Controlo
             }
             return true;
         }
-
-        // ------------------------------------------------------------------
-        // OPERAÇÕES DO BACKOFFICE (admin "sibs")
-        // ------------------------------------------------------------------
-
-        // Carrega todos os clientes e contas da BD para listaCredenciais.
-        // O frmAdmin lê listaCredenciais para preencher o ListView.
-        public void fListarCredenciais()
-        {
-            cAdmin oAdmin = new cAdmin();
-
-            operacao         = oAdmin.fListarCredenciais();
-            mensagem         = oAdmin.mensagem;
-            listaCredenciais = oAdmin.listaCredenciais; // copiar a lista para o formulário ler
-        }
-
-        // Insere um novo cliente e conta com saldo inicial de 100€.
-        // Regra do enunciado: o admin sibs associa sempre 100€ ao criar uma conta.
-        public void fInserirCliente(string banco, string cliente, string conta, string pin)
-        {
-            cAdmin oAdmin = new cAdmin();
-
-            operacao = oAdmin.fInserirCredencial(banco, cliente, conta, pin);
-            mensagem = oAdmin.mensagem;
-        }
-
-        // ------------------------------------------------------------------
-        // OPERAÇÕES BANCÁRIAS (cliente no frmMultibanco)
-        // ------------------------------------------------------------------
 
         // Levantamento: valida saldo suficiente, atualiza saldo e regista movimento 'L'.
         public void fLevantar(int contaId, decimal valor)
@@ -269,6 +255,9 @@ namespace Multibanco._02Controlo
             saldoAtualizado = novoSaldoOrig;
         }
 
+
+
+        // ================ METODOS MBWAY ================
         // MBWay: verifica se conta destino é aderente, depois funciona como transferência com tipo 'M'.
         // contaOrigem  — Id interno da conta do utilizador logado
         // contaNumDest — número de conta visível introduzido no txtContaDestino (ex: 654321)
@@ -283,6 +272,14 @@ namespace Multibanco._02Controlo
                 mensagem = "O valor a enviar tem de ser maior que zero.";
                 return;
             }
+
+            if (valor > 300)
+            {
+                operacao = false;
+                mensagem = "O valor a enviar não pode exceder 300€ por transação.";
+                return;
+            }
+
 
             // Resolver o número de conta destino para o Id interno + saldo (1 única query)
             if (!oMov.fObterContaDestino(contaNumDest, out int idDestino, out decimal saldoDestino))
@@ -323,6 +320,28 @@ namespace Multibanco._02Controlo
             saldoAtualizado = novoSaldoOrig;
         }
 
+        // Verificar se a conta é aderente ao MBWay (usado para mostrar/ocultar opção no UI)
+        public void fVerificarMBWay(int contaId) 
+        {
+            cMovimento oMov = new cMovimento();
+            bool aderente = oMov.fObterMBWay(contaId);
+            mbwayAtivo = aderente;
+        }
+
+        // Carrega a LISTA com as contas com MBWay ativo, excluindo a conta do utilizador logado.
+        public void fListarContasMBWay(int contaOrigem)
+        {
+            cMBWay oMBWay = new cMBWay();
+
+            operacao = oMBWay.fListarContasMBWay(contaOrigem); // preciso do resultado para saber se houve erro de BD
+            mensagem = oMBWay.mensagem; // Se tiver erro de BD preciso da mensagem para mostrar ao utilizador
+            listaContasMBWay = oMBWay.listaContasMBWay; // esta é a lista que vou enviar para o formulário de transferência MBWay para preencher a dropdown
+        }
+        
+
+        
+        // ================ METODOS SERVIÇOS ================
+
         // Pagamento de serviço pré-definido: igual ao levantamento mas tipo 'P' e descrição personalizada.
         public void fPagamento(int contaId, decimal valor, string descricao)
         {
@@ -361,6 +380,10 @@ namespace Multibanco._02Controlo
             listaServicos = oServ.listaServicos;
         }
 
+
+
+        //  ================ METODOS LISTA DE MOVIMENTOS ================
+
         // Carrega os movimentos de uma conta com filtro de datas opcional.
         // dataInicio e dataFim podem ser null para listar todos os movimentos.
         public void fListarMovimentos(int contaId, DateTime? dataInicio, DateTime? dataFim)
@@ -372,13 +395,28 @@ namespace Multibanco._02Controlo
             listaMovimentos = oMov.listaMovimentos;
         }
 
-        // Ativa ou desativa o MBWay de uma conta pelo Id.
-        // Funcionalidade extra — gerida pelo admin sibs no BackOffice.
-        public void fAlternarMBWay(int id, bool novoEstado)
+
+
+        //  ================ METODOS BACK OFFICE SIBS ================
+
+        // Carrega todos os clientes e contas da BD para listaCredenciais.
+        // O frmAdmin lê listaCredenciais para preencher o ListView.
+        public void fListarCredenciais()
         {
             cAdmin oAdmin = new cAdmin();
 
-            operacao = oAdmin.fAlternarMBWay(id, novoEstado);
+            operacao = oAdmin.fListarCredenciais();
+            mensagem = oAdmin.mensagem;
+            listaCredenciais = oAdmin.listaCredenciais; // copiar a lista para o formulário ler
+        }
+
+        // Insere um novo cliente e conta com saldo inicial de 100€.
+        // Regra do enunciado: o admin sibs associa sempre 100€ ao criar uma conta.
+        public void fInserirCliente(string banco, string cliente, string conta, string pin)
+        {
+            cAdmin oAdmin = new cAdmin();
+
+            operacao = oAdmin.fInserirCredencial(banco, cliente, conta, pin);
             mensagem = oAdmin.mensagem;
         }
 
@@ -388,8 +426,8 @@ namespace Multibanco._02Controlo
         public void fEliminarCliente(int id)
         {
             // Usar cMovimento para obter o saldo — evita duplicar o mesmo SQL em cAdmin
-            cMovimento oMov      = new cMovimento();
-            decimal    saldoAtual = oMov.fObterSaldo(id);
+            cMovimento oMov = new cMovimento();
+            decimal saldoAtual = oMov.fObterSaldo(id);
 
             if (!oMov.operacao)
             {
@@ -407,6 +445,25 @@ namespace Multibanco._02Controlo
 
             cAdmin oAdmin = new cAdmin();
             operacao = oAdmin.fEliminarCredencial(id);
+            mensagem = oAdmin.mensagem;
+        }
+
+        // Ativa ou desativa o MBWay de uma conta pelo Id.
+        // Funcionalidade extra — gerida pelo admin sibs no BackOffice.
+        public void fAlternarMBWay(int id, bool novoEstado)
+        {
+            cAdmin oAdmin = new cAdmin();
+
+            operacao = oAdmin.fAlternarMBWay(id, novoEstado);
+            mensagem = oAdmin.mensagem;
+        }
+
+        // Desbloqueia uma conta bloqueada — só o admin sibs pode chamar isto.
+        public void fDesbloquearConta(int id)
+        {
+            cAdmin oAdmin = new cAdmin();
+
+            operacao = oAdmin.fDesbloquearConta(id);
             mensagem = oAdmin.mensagem;
         }
     }

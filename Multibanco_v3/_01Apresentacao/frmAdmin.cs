@@ -154,8 +154,27 @@ namespace Multibanco._01Apresentacao
             }
         }
 
+        // Botão "Desbloquear" — remove o bloqueio da conta selecionada no ListView
+        private void btnDesbloquear_Click(object sender, EventArgs e)
+        {
+            if (lvClientes.SelectedItems.Count == 0)
+            {
+                MessageBox.Show("Selecione um cliente na lista.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            int id = Convert.ToInt32(lvClientes.SelectedItems[0].Text); // coluna 0: Id
+            string nomeCliente = lvClientes.SelectedItems[0].SubItems[2].Text; // coluna 2: Cliente
+
+            cControlo oCtrl = new cControlo();
+            oCtrl.fDesbloquearConta(id); // método a implementar no cControlo para remover o bloqueio da conta
+
+            fMostrarResultadoEAtualizar(oCtrl); // atualiza a lista para refletir o novo estado (desbloqueado) da conta
+        }
+
+
         // Botão "Sair" — fecha o BackOffice e regressa ao ecrã de login
-        private void btnSair_Click(object sender, EventArgs e)
+        private void btnSair_Click(object sender, EventArgs e) // handler do clique no botão "Sair"
         {
             this.Close();
         }

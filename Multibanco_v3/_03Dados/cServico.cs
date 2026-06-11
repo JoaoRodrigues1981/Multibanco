@@ -15,6 +15,10 @@ namespace Multibanco._03Dados
 
         cConexao oConexao = new cConexao();
 
+        // ------------------------------------------------------------------
+        // Devolve todos os serviços da tabela Servicos.
+        // Resultado guardado em listaServicos para o frmPagamentosServicos apresentar.
+        // ------------------------------------------------------------------
         public bool fListarServicos()
         {
             listaServicos.Clear();

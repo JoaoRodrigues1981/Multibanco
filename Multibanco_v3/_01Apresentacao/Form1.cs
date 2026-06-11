@@ -43,6 +43,11 @@ namespace Multibanco
             dtpInicio.Value = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
             dtpFim.Value    = DateTime.Now;
 
+            cControlo oCtrl = new cControlo(); // Vamos controlar se o botão MBWay esta enable ou disable
+            oCtrl.fVerificarMBWay(_contaId);
+            if (!oCtrl.mbwayAtivo)
+                btnMBWay.Enabled = false;
+
             fCarregarMovimentos();
         }
 
@@ -64,6 +69,9 @@ namespace Multibanco
                 item.SubItems.Add(linha[4]);
                 lstMovimentos.Items.Add(item);
             }
+
+            // Ajusta a largura da coluna "Descrição" ao conteúdo, porque me cortava e nao tinha como ler. Assim coloca o scroll
+            lstMovimentos.AutoResizeColumn(4, ColumnHeaderAutoResizeStyle.ColumnContent); 
         }
 
         // Converte o código de tipo ('D','L','T','P','M') para texto legível
@@ -121,15 +129,12 @@ namespace Multibanco
             fMostrarResultado(oCtrl);
         }
 
-        // Botão "MBWay"
+        // Botão "MBWay" — abre a janela de envio MBWay com a lista de destinatários disponíveis
         private void btnMBWay_Click(object sender, EventArgs e)
         {
-            if (!fValidarValor(out decimal valor))      return;
-            if (!fValidarContaDestino(out int destino)) return;
-
-            cControlo oCtrl = new cControlo();
-            oCtrl.fMBWay(_contaId, destino, valor);
-            fMostrarResultado(oCtrl);
+            frmMBWay frm = new frmMBWay(_contaId);
+            if (frm.ShowDialog() == DialogResult.OK)
+                fRefrescarEcra(frm.NovoSaldo);
         }
 
         // Mostra o resultado de uma operação bancária e atualiza o ecrã se foi bem-sucedida.
@@ -171,11 +176,6 @@ namespace Multibanco
             return true;
         }
 
-        // Evento de clique no label do título — vazio, não faz nada
-        private void label1_Click(object sender, EventArgs e)
-        {
-        }
-
         // Botão "Filtrar" — aplica o filtro de datas ao histórico
         private void btnFiltrar_Click(object sender, EventArgs e)
         {
@@ -211,6 +211,12 @@ namespace Multibanco
             frmPagamentosServicos frm = new frmPagamentosServicos(_contaId);
             if (frm.ShowDialog() == DialogResult.OK)
                 fRefrescarEcra(frm.NovoSaldo);
+        }
+
+        // Tick do relógio — atualiza o label a cada segundo
+        private void tmrRelogio_Tick(object sender, EventArgs e)
+        {
+            lblRelogio.Text = DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss");
         }
 
         // Botão "Sair" — fecha toda a aplicação

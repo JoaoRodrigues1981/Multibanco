@@ -14,7 +14,9 @@ namespace Multibanco._01Apresentacao
         private string txt_Pin     = "";
         private string oldPin      = "";   // PIN original, para verificação no UPDATE da BD
 
-        // Getters e setters — encapsulamento: os campos privados só são acedidos por estes métodos
+        // Getters e setters — encapsulamento: os campos privados só são acedidos por estes métodos.
+        // Em C# o equivalente seriam propriedades (get/set), mas optou-se pelo padrão
+        // explícito get_X / set_X para tornar a leitura mais clara para quem aprende.
         public string get_Banco()    { return txt_Banco; }
         public string get_Cliente()  { return txt_Cliente; }
         public string get_Conta()    { return txt_Conta; }
@@ -53,18 +55,6 @@ namespace Multibanco._01Apresentacao
         private void btnExit_Click(object sender, EventArgs e)
         {
             Close();
-        }
-
-        private void txtNovoPin_TextChanged(object sender, EventArgs e)
-        {
-        }
-
-        private void txtConfPin_TextChanged(object sender, EventArgs e)
-        {
-        }
-
-        private void txtConfPin_TextChanged_1(object sender, EventArgs e)
-        {
         }
 
         // Botão "OK" — valida os PINs e grava o novo PIN na base de dados
