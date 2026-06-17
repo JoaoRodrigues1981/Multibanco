@@ -1,4 +1,4 @@
-# Multibanco v3 — Guia de Estudo
+# Multibanco v3
 
 **Tecnologias:** C# / .NET 8 / Windows Forms / PostgreSQL / Npgsql  
 **BD:** `Multibanco` | Host: localhost | User: postgres | Password: 1234  
