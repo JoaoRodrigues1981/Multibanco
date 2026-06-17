@@ -65,19 +65,14 @@ namespace Multibanco
                 return;
             }
 
-            if (txtReferencia.Text.Length != 9)
-            {
-                MessageBox.Show("A referência tem de ter exatamente 9 dígitos.", "ERRO",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-
+            // Validação de formato — verifica apenas se o campo contém um número parseável.
+            // Regras de negócio (valor > 0, referência com 9 dígitos) ficam no cControlo.fPagamento.
             if (!decimal.TryParse(txtValorServ.Text.Replace(",", "."),
                 System.Globalization.NumberStyles.Any,
                 System.Globalization.CultureInfo.InvariantCulture,
-                out decimal valor) || valor <= 0)
+                out decimal valor))
             {
-                MessageBox.Show("Introduza um valor numérico válido e maior que zero.", "ERRO",
+                MessageBox.Show("Introduza um valor numérico válido.", "ERRO",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
@@ -87,7 +82,7 @@ namespace Multibanco
             string descricao = servico + " | Ent " + entidade + " Ref " + txtReferencia.Text;
 
             cControlo oCtrl = new cControlo();
-            oCtrl.fPagamento(_contaId, valor, descricao);
+            oCtrl.fPagamento(_contaId, valor, descricao, txtReferencia.Text);
 
             if (!oCtrl.operacao)
             {

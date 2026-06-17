@@ -16,6 +16,8 @@ namespace Multibanco._01Apresentacao
         // Quando o formulário abre, carregar imediatamente a lista de clientes
         private void frmAdmin_Load(object sender, EventArgs e)
         {
+            // Coluna Bloqueada adicionada aqui e não no Designer — o Designer apaga colunas ao guardar
+            lvClientes.Columns.Add("Bloqueada", 70);
             fCarregarLista();
         }
 
@@ -43,6 +45,7 @@ namespace Multibanco._01Apresentacao
                 item.SubItems.Add(linha[3]); // Conta
                 item.SubItems.Add(linha[4]); // Saldo
                 item.SubItems.Add(linha[5]); // MBWay (Sim/Não)
+                item.SubItems.Add(linha[6]); // Bloqueada (Sim/Não)
                 lvClientes.Items.Add(item);
             }
 

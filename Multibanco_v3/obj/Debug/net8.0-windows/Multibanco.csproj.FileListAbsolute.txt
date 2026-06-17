@@ -45,3 +45,4 @@ C:\Users\joaor\OneDrive - islagaia.pt\SB-JR\02 ISLA\1.2_Algoritmos e Estruturas 
 C:\Users\joaor\OneDrive - islagaia.pt\SB-JR\02 ISLA\1.2_Algoritmos e Estruturas Dados\ArqEstruturaDados\Multibanco\Multibanco_v3\obj\Debug\net8.0-windows\Multibanco.genruntimeconfig.cache
 C:\Users\joaor\OneDrive - islagaia.pt\SB-JR\02 ISLA\1.2_Algoritmos e Estruturas Dados\ArqEstruturaDados\Multibanco\Multibanco_v3\obj\Debug\net8.0-windows\ref\Multibanco.dll
 C:\Users\joaor\OneDrive - islagaia.pt\SB-JR\02 ISLA\1.2_Algoritmos e Estruturas Dados\ArqEstruturaDados\Multibanco\Multibanco_v3\obj\Debug\net8.0-windows\Multibanco._01Apresentacao.frmAdmin.resources
+C:\Users\joaor\OneDrive - islagaia.pt\SB-JR\02 ISLA\1.2_Algoritmos e Estruturas Dados\ArqEstruturaDados\Multibanco\Multibanco_v3\obj\Debug\net8.0-windows\Multibanco.frmMBWay.resources

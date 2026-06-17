@@ -14,9 +14,15 @@ namespace Multibanco._01Apresentacao
         private string txt_Pin     = "";
         private string oldPin      = "";   // PIN original, para verificação no UPDATE da BD
 
-        // Getters e setters — encapsulamento: os campos privados só são acedidos por estes métodos.
+        // Getters e setters — encapsulamento: os campos privados só são acedidos por estes métodos. (FORMA de proteger dados)
+        //
+        // O frmUpdate recebe 4 dados do frmAutenticacao (Banco, Cliente, Conta, PIN). Esses dados não devem ser alterados "fora"
+        // São a identidade do utilizador já validada.
+        //
         // Em C# o equivalente seriam propriedades (get/set), mas optou-se pelo padrão
         // explícito get_X / set_X para tornar a leitura mais clara para quem aprende.
+        // get_X() - permite ler o valor de X
+        // set_X() - permite alterar o valor de X, de forma controlada
         public string get_Banco()    { return txt_Banco; }
         public string get_Cliente()  { return txt_Cliente; }
         public string get_Conta()    { return txt_Conta; }
@@ -51,13 +57,13 @@ namespace Multibanco._01Apresentacao
             txtNovoPin.Text  = ""; // campo novo PIN começa vazio
         }
 
-        // Botão "Saída" — fecha este ecrã sem gravar nada
+        // BOTÃO "SAIR" — fecha este ecrã sem gravar nada
         private void btnExit_Click(object sender, EventArgs e)
         {
             Close();
         }
 
-        // Botão "OK" — valida os PINs e grava o novo PIN na base de dados
+        // BOTÃO "OK" — valida os PINs e grava o novo PIN na base de dados
         private void btnOK_Click(object sender, EventArgs e)
         {
             cControlo oCtrl = new cControlo();

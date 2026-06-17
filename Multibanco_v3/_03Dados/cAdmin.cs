@@ -15,7 +15,7 @@ namespace Multibanco._03Dados
         public string mensagem = "";
 
         // Lista de clientes devolvida por fListarCredenciais.
-        // Cada entrada é um array: [Id, Banco, Cliente, Conta, Saldo].
+        // Cada entrada é um array: [Id, Banco, Cliente, Conta, Saldo, MBWay, Bloqueada].
         public List<string[]> listaCredenciais = new List<string[]>();
 
         // Objeto de ligação — usa cConexao para abrir/fechar a BD
@@ -54,7 +54,7 @@ namespace Multibanco._03Dados
             listaCredenciais.Clear(); // limpar resultados de chamadas anteriores
 
             NpgsqlCommand oCmd = new NpgsqlCommand();
-            oCmd.CommandText = "SELECT Id, Banco, Cliente, Conta, Saldo, MBWay FROM Credenciais ORDER BY Cliente, Conta";
+            oCmd.CommandText = "SELECT Id, Banco, Cliente, Conta, Saldo, MBWay, Bloqueada FROM Credenciais ORDER BY Cliente, Conta";
 
             try
             {
@@ -66,12 +66,13 @@ namespace Multibanco._03Dados
                     // Guardar cada linha como array de strings para o formulário apresentar
                     listaCredenciais.Add(new string[]
                     {
-                        oReader.GetInt32(0).ToString(),      // Id
-                        oReader.GetString(1),                // Banco
-                        oReader.GetString(2),                // Cliente
-                        oReader.GetInt32(3).ToString(),      // Conta
-                        oReader.GetDecimal(4).ToString("F2"),// Saldo (2 casas decimais)
-                        oReader.GetBoolean(5) ? "Sim" : "Não" // MBWay ativo?
+                        oReader.GetInt32(0).ToString(),        // Id
+                        oReader.GetString(1),                  // Banco
+                        oReader.GetString(2),                  // Cliente
+                        oReader.GetInt32(3).ToString(),        // Conta
+                        oReader.GetDecimal(4).ToString("F2"),  // Saldo (2 casas decimais)
+                        oReader.GetBoolean(5) ? "Sim" : "Não", // MBWay ativo?
+                        oReader.GetBoolean(6) ? "Sim" : "Não"  // Bloqueada?
                     });
                 }
 

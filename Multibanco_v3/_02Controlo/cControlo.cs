@@ -25,6 +25,7 @@ namespace Multibanco._02Controlo
         
         
         // ======== LISTAS ========
+
         // Lista de clientes devolvida por fListarCredenciais — lida pelo frmAdmin
         public List<string[]> listaCredenciais = new List<string[]>();
 
@@ -37,12 +38,14 @@ namespace Multibanco._02Controlo
         // Lista de contas MBWay devolvida por fListarContasMBWay — lida pelo frmMBWay
         public List<string[]> listaContasMBWay = new List<string[]>();
 
-        
-        
-        //============= VARIÁVEIS AUXILIARES =============
 
+
+        // ============= METODOS USADOS PARA AUTENTICAÇÃO e ALTERAR PIN =============
+
+        // TESTAR CAMPOS (CLIENTE)
+        // é usada pelo frmAutenticacao para validar os campos de login antes de chamar fValidarCredenciais
         // Verificação básica para clientes normais: algum dos 4 campos está vazio?
-        // É chamado antes de tentar ir à base de dados.
+        // NOTA IMPORANTE: É chamado antes de tentar ir à base de dados.
         public void fTestarCampos(string txtBanco, string txtCliente, string txtConta, string txtPin)
         {
             if (txtBanco == "" || txtCliente == "" || txtConta == "" || txtPin == "")
@@ -52,6 +55,7 @@ namespace Multibanco._02Controlo
             }
         }
 
+        // TESTA CAMPOS (ADMIN)
         // Verificação básica para o administrador "sibs": só valida Cliente e PIN.
         // Banco e Conta não são usados pelo admin — não faz sentido obrigá-lo a preenchê-los.
         public void fTestarCamposAdmin(string txtCliente, string txtPin)
@@ -63,18 +67,18 @@ namespace Multibanco._02Controlo
             }
         }
 
-        // Validação real: os dados do utilizador existem na base de dados?
+        // Delega a validação de credenciais ao cLogin (Camada 3) e republica os resultados.
         // Só é chamado se fTestarCampos não encontrou campos vazios.
         public void fValidarCredenciais(string txtBanco, string txtCliente, string txtConta, string txtPin)
         {
             cLogin oLogin = new cLogin();
 
-            // Chamar o método que faz a consulta à BD e copiar os resultados
+            // Execução passa para a Camada 3 — é aqui que as queries correm
             operacao = oLogin.fObterCredenciais(txtBanco, txtCliente, txtConta, txtPin);
+
+            // Copiar sempre todas as variáveis do cLogin para as suas variáveis públicas.
             existe   = oLogin.existe;
             mensagem = oLogin.mensagem;
-
-            // Se o login foi bem-sucedido, copiar os dados da conta para passar ao frmMultibanco
             contaId  = oLogin.contaId;
             saldo    = oLogin.saldo;
             banco    = oLogin.banco;
@@ -94,8 +98,9 @@ namespace Multibanco._02Controlo
             mensagem = oLogin.mensagem;
         }
 
-        // Verifica se os dois PINs introduzidos pelo utilizador são iguais.
-        // Chamado antes de tentar gravar o novo PIN na BD.
+        // VALIDAR SE NOVO PIN E CONFIRMAÇÃO SÃO IGUAIS
+        // chamado pelo frmUpdate.cs > btnOK_Click, antes de ir à base de dados para alterar o PIN.
+        // Verifica se os dois PINs introduzidos pelo utilizador são iguais, antes de ir à base de dados.
         public void fValidarPinsIguais(string pin1, string pin2)
         {
             if (pin1 != pin2)
@@ -105,7 +110,7 @@ namespace Multibanco._02Controlo
             }
         }
 
-        // Atualiza o PIN na base de dados.
+        // ATUALIZA PIN via camada 3
         // Só deve ser chamado depois de fValidarPinsIguais confirmar que são iguais.
         public void fAtualizarPin(string banco, string cliente, string conta, string oldPin, string newPin)
         {
@@ -118,29 +123,30 @@ namespace Multibanco._02Controlo
 
 
 
-        // ========= METODOS DE OPERAÇÕES BANCÁRIAS (cliente no frmMultibanco) ==========
+        // ================ METODOS LISTA DE MOVIMENTOS ================
+
+        // Ao entrar no form1, vamos logo ter de mostrar a lista de movimentos do cliente.
+        // Este metodo carrega os movimentos de uma conta com filtro de datas opcional.
+        // dataInicio e dataFim podem ser null para listar todos os movimentos.
+        public void fListarMovimentos(int contaId, DateTime? dataInicio, DateTime? dataFim)
+        {
+            cMovimento oMov = new cMovimento();
+
+            operacao = oMov.fListarMovimentos(contaId, dataInicio, dataFim);
+            mensagem = oMov.mensagem;
+            listaMovimentos = oMov.listaMovimentos;
+        }
+
+
+
+        // ========= METODOS DE OPERAÇÕES BANCÁRIAS (cliente realiza diretamente no frmMultibanco) ==========
 
         // Saldo atualizado após operação — o formulário usa para refrescar o ecrã
         public decimal saldoAtualizado = 0;
 
-        // ------------------------------------------------------------------
-        // Helper privado — verifica se o saldo é suficiente para a operação.
-        // Reutilizado em fLevantar, fTransferir, fMBWay e fPagamento para evitar
-        // a repetição do bloco if + mensagem de erro em cada método.
-        // Devolve false e define operacao/mensagem se o saldo for insuficiente.
-        // ------------------------------------------------------------------
-        private bool fSaldoSuficiente(decimal saldo, decimal valor)
-        {
-            if (saldo < valor)
-            {
-                operacao = false;
-                mensagem = "Saldo insuficiente. Saldo disponível: " + saldo.ToString("F2") + "€.";
-                return false;
-            }
-            return true;
-        }
+        // LAVANTAMENTO
+        // Vai usar metodos auxiliares (helper): fSaldoSuficiente para validar se o cliente tem saldo suficiente para o levantamento.
 
-        // Levantamento: valida saldo suficiente, atualiza saldo e regista movimento 'L'.
         public void fLevantar(int contaId, decimal valor)
         {
             cMovimento oMov = new cMovimento();
@@ -154,7 +160,8 @@ namespace Multibanco._02Controlo
                 return;
             }
 
-            if (valor <= 0) // valor inválido
+            // Regra de negócio: o valor tem de ser positivo — o formulário só valida formato
+            if (valor <= 0)
             {
                 operacao = false;
                 mensagem = "O valor a levantar tem de ser maior que zero.";
@@ -163,21 +170,40 @@ namespace Multibanco._02Controlo
 
             if (!fSaldoSuficiente(saldoAtual, valor)) return; // regra do enunciado
 
-            decimal novoSaldo = saldoAtual - valor;
+            decimal novoSaldo = saldoAtual - valor; // calcular o novo saldo com o saldo atual recebido do cMovimento
 
-            oMov.fAtualizarSaldo(contaId, novoSaldo);
+            oMov.fAtualizarSaldo(contaId, novoSaldo); // enviamos o novo saldo para a camada 3 atualizar na BD
             oMov.fInserirMovimento(contaId, "L", valor, novoSaldo, "Levantamento");
 
-            operacao       = oMov.operacao;
-            mensagem       = oMov.operacao ? "Levantamento de " + valor.ToString("F2") + "€ realizado." : oMov.mensagem;
+            operacao = oMov.operacao;
+            mensagem = oMov.operacao ? "Levantamento de " + valor.ToString("F2") + "€ realizado." : oMov.mensagem;
             saldoAtualizado = novoSaldo;
         }
 
-        // Depósito: atualiza saldo e regista movimento 'D'.
+        // ------------------------------------------------------------------
+        // Helper privado — verifica se o saldo é suficiente para a operação. 
+        // Reutilizado em fLevantar, fTransferir, fMBWay e fPagamento para evitar a repetição do bloco if + mensagem de erro em cada método.
+        // Devolve false e define operacao/mensagem se o saldo for insuficiente.
+        // ------------------------------------------------------------------
+        private bool fSaldoSuficiente(decimal saldo, decimal valor)
+        {
+            if (saldo < valor)
+            {
+                operacao = false;
+                mensagem = "Saldo insuficiente. Saldo disponível: " + saldo.ToString("F2") + "€.";
+                return false;
+            }
+            return true;
+        }
+
+
+        // DEPOSITO
+        // Atualiza saldo e regista movimento 'D'.
         public void fDepositar(int contaId, decimal valor)
         {
             cMovimento oMov = new cMovimento();
 
+            // Regra de negócio: o valor tem de ser positivo — o formulário só valida formato
             if (valor <= 0)
             {
                 operacao = false;
@@ -204,6 +230,8 @@ namespace Multibanco._02Controlo
             saldoAtualizado = novoSaldo;
         }
 
+
+        // TRANSFERENCIA
         // Transferência: valida saldo origem, atualiza os dois saldos e regista 2 movimentos 'T'.
         // contaOrigem  — Id interno da conta do utilizador logado (vem do login, é o Id da linha)
         // contaNumDest — número de conta visível introduzido no txtContaDestino (ex: 654321)
@@ -212,6 +240,7 @@ namespace Multibanco._02Controlo
         {
             cMovimento oMov = new cMovimento();
 
+            // Regra de negócio: o valor tem de ser positivo — o formulário só valida formato
             if (valor <= 0)
             {
                 operacao = false;
@@ -245,10 +274,10 @@ namespace Multibanco._02Controlo
             decimal novoSaldoDest = saldoDestino + valor;
 
             // Atualizar os dois saldos e registar um movimento em cada conta
-            oMov.fAtualizarSaldo(contaOrigem, novoSaldoOrig);
-            oMov.fAtualizarSaldo(idDestino,   novoSaldoDest);
-            oMov.fInserirMovimento(contaOrigem, "T", valor, novoSaldoOrig, "Transferência para conta " + contaNumDest);
-            oMov.fInserirMovimento(idDestino,   "T", valor, novoSaldoDest, "Transferência de conta "   + contaNumDest);
+            oMov.fAtualizarSaldo(contaOrigem, novoSaldoOrig); // atualiza saldo da conta de origem
+            oMov.fAtualizarSaldo(idDestino,   novoSaldoDest); // atualiza saldo da conta de destino
+            oMov.fInserirMovimento(contaOrigem, "T", valor, novoSaldoOrig, "Transferência para conta " + contaNumDest); // regista movimento na conta de origem
+            oMov.fInserirMovimento(idDestino,   "T", valor, novoSaldoDest, "Transferência de conta "   + contaNumDest); // regista movimento na conta de destino
 
             operacao        = oMov.operacao;
             mensagem        = oMov.operacao ? "Transferência de " + valor.ToString("F2") + "€ realizada." : oMov.mensagem;
@@ -256,16 +285,20 @@ namespace Multibanco._02Controlo
         }
 
 
-
-        // ================ METODOS MBWAY ================
+        // ================ METODOS USADOS NO FORMULÁRIO MBWAY ================
         // MBWay: verifica se conta destino é aderente, depois funciona como transferência com tipo 'M'.
         // contaOrigem  — Id interno da conta do utilizador logado
         // contaNumDest — número de conta visível introduzido no txtContaDestino (ex: 654321)
         //                Resolvido para Id interno + saldo via fObterContaDestino (1 query).
+        //
+        // Regras de negócio centralizadas aqui (não no formulário):
+        // o formulário só valida formato (é um número?); as regras da operação ficam nesta camada
+        // para se aplicarem independentemente de qual formulário chamar fMBWay.
         public void fMBWay(int contaOrigem, int contaNumDest, decimal valor)
         {
             cMovimento oMov = new cMovimento();
 
+            // Regra de negócio: o valor tem de ser positivo
             if (valor <= 0)
             {
                 operacao = false;
@@ -273,6 +306,7 @@ namespace Multibanco._02Controlo
                 return;
             }
 
+            // Regra de negócio: limite MBWay por transação
             if (valor > 300)
             {
                 operacao = false;
@@ -337,16 +371,26 @@ namespace Multibanco._02Controlo
             mensagem = oMBWay.mensagem; // Se tiver erro de BD preciso da mensagem para mostrar ao utilizador
             listaContasMBWay = oMBWay.listaContasMBWay; // esta é a lista que vou enviar para o formulário de transferência MBWay para preencher a dropdown
         }
-        
 
-        
-        // ================ METODOS SERVIÇOS ================
+
+
+        // ================ METODOS USADOS NO FORMULÁRIO SERVIÇOS ================
 
         // Pagamento de serviço pré-definido: igual ao levantamento mas tipo 'P' e descrição personalizada.
-        public void fPagamento(int contaId, decimal valor, string descricao)
+        // Regras de negócio centralizadas aqui — o formulário só valida formato (campo é número?).
+        public void fPagamento(int contaId, decimal valor, string descricao, string referencia)
         {
             cMovimento oMov = new cMovimento();
 
+            // Regra de negócio: referência Multibanco tem sempre 9 dígitos
+            if (referencia.Length != 9)
+            {
+                operacao = false;
+                mensagem = "A referência tem de ter exatamente 9 dígitos.";
+                return;
+            }
+
+            // Regra de negócio: o valor tem de ser positivo
             if (valor <= 0)
             {
                 operacao = false;
@@ -382,22 +426,7 @@ namespace Multibanco._02Controlo
 
 
 
-        //  ================ METODOS LISTA DE MOVIMENTOS ================
-
-        // Carrega os movimentos de uma conta com filtro de datas opcional.
-        // dataInicio e dataFim podem ser null para listar todos os movimentos.
-        public void fListarMovimentos(int contaId, DateTime? dataInicio, DateTime? dataFim)
-        {
-            cMovimento oMov = new cMovimento();
-
-            operacao       = oMov.fListarMovimentos(contaId, dataInicio, dataFim);
-            mensagem       = oMov.mensagem;
-            listaMovimentos = oMov.listaMovimentos;
-        }
-
-
-
-        //  ================ METODOS BACK OFFICE SIBS ================
+        //  ================ METODOS USADOS NO FORMULÁRIO BACK OFFICE SIBS ================
 
         // Carrega todos os clientes e contas da BD para listaCredenciais.
         // O frmAdmin lê listaCredenciais para preencher o ListView.

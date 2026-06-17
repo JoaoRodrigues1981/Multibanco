@@ -60,20 +60,15 @@ namespace Multibanco
                 return;
             }
 
-            // Validar valor: tem de ser numérico, maior que zero e no máximo 300€
+            // Validação de formato — o campo tem de ser um número parseável. 
+            // NOTA: as Regras de negócio (valor > 0, máximo 300€) ficam no cControlo.fMBWay,
+            // são regras da operação, não do formulário, e assim aplicam-se independentemente de quem chamar fMBWay.
             if (!decimal.TryParse(txtValor.Text.Replace(",", "."),
                 System.Globalization.NumberStyles.Any,
                 System.Globalization.CultureInfo.InvariantCulture,
-                out decimal valor) || valor <= 0)
+                out decimal valor))
             {
-                MessageBox.Show("Introduza um valor numérico válido e maior que zero.", "ERRO",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-
-            if (valor > 300)
-            {
-                MessageBox.Show("O MBWay tem um limite de 300€ por transação.", "ERRO",
+                MessageBox.Show("Introduza um valor numérico válido.", "ERRO",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }

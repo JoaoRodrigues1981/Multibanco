@@ -26,7 +26,9 @@ namespace Multibanco
             _conta   = conta;
         }
 
-        // Evento que corre quando o formulário abre
+        // ============= CARREGAR FORMULÁRIO =============
+        
+        // PRIMEIRO EVENTO - que corre quando o formulário abre
         private void frmMultibanco_Load(object sender, EventArgs e)
         {
             // Colunas aqui e não no Designer, porque estava com dificulades uma vez que o Designer apaga-as ao guardar
@@ -40,19 +42,22 @@ namespace Multibanco
             lblCliente.Text = _cliente + " | Conta: " + _conta;
             txtSaldo.Text   = _saldo.ToString("F2") + " €";
 
+            // ADICIONAMOS um relogio digital no canto superior direito do formulário
             dtpInicio.Value = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
             dtpFim.Value    = DateTime.Now;
 
-            cControlo oCtrl = new cControlo(); // Vamos controlar se o botão MBWay esta enable ou disable
+            // ADICIONAMOS validação ao carregar o formu
+            cControlo oCtrl = new cControlo(); // CHAMA camada de CONTROLO, para saber se o botão MBWay esta enable ou disable
             oCtrl.fVerificarMBWay(_contaId);
             if (!oCtrl.mbwayAtivo)
                 btnMBWay.Enabled = false;
 
+            // CARREGAR MOVIMENTOS — chamamos o metodo que carrega os movimentos do cliente
             fCarregarMovimentos();
         }
 
-        // Carrega movimentos com filtro de datas opcional.
-        // Sem argumentos mostra todos; com datas aplica o filtro.
+        // HISTÓRICO DE MOVIMENTOS - Carrega movimentos com filtro de datas opcional.
+        // Sem argumentos (ou seja data inicio e data fim) mostra todos; com datas aplica o filtro.
         private void fCarregarMovimentos(DateTime? dataInicio = null, DateTime? dataFim = null)
         {
             cControlo oCtrl = new cControlo();
@@ -70,11 +75,12 @@ namespace Multibanco
                 lstMovimentos.Items.Add(item);
             }
 
-            // Ajusta a largura da coluna "Descrição" ao conteúdo, porque me cortava e nao tinha como ler. Assim coloca o scroll
+            // Ajusta a largura da coluna "Descrição" ao conteúdo, porque me cortava e nao tinha como ler. Assim coloca o scroll lateral.
             lstMovimentos.AutoResizeColumn(4, ColumnHeaderAutoResizeStyle.ColumnContent); 
         }
 
-        // Converte o código de tipo ('D','L','T','P','M') para texto legível
+        // Método auxiliar - CONVERSOR DE TIPO DE MOVIMENTO — converte o tipo de movimento do banco (D, C, T, P) para uma descrição legível.
+        // Usado dentro do fCarregarMovimentos para mostrar o tipo de movimento na ListView.
         private string fTraduzirTipo(string tipo)
         {
             switch (tipo)
@@ -88,20 +94,22 @@ namespace Multibanco
             }
         }
 
-        // Método auxiliar — atualiza o saldo no ecrã e recarrega os movimentos após operação
-        private void fRefrescarEcra(decimal novoSaldo)
+        // Tick do relógio — atualiza o label a cada segundo
+        private void tmrRelogio_Tick(object sender, EventArgs e)
         {
-            _saldo        = novoSaldo;
-            txtSaldo.Text = _saldo.ToString("F2") + " €";
-            fCarregarMovimentos();
-            txtValor.Text          = ""; // limpar o campo de valor após operação
-            txtContaDestino.Text   = ""; // limpar conta destino
+            lblRelogio.Text = DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss");
         }
+
+        
+
+        // ============= BOTÕES DE OPERAÇÕES =============
 
         // Botão "Levantar"
         private void btnLevantar_Click(object sender, EventArgs e)
         {
-            if (!fValidarValor(out decimal valor)) return;
+            if (!fValidarValor(out decimal valor)) return; // que é um método auxiliar (ou helper),
+                                                           // Se for False, para aqui e não há continuação
+                                                           // E o helper,ele proprio mostra msg de erro.
 
             cControlo oCtrl = new cControlo();
             oCtrl.fLevantar(_contaId, valor);
@@ -121,7 +129,7 @@ namespace Multibanco
         // Botão "Transferir"
         private void btnTransferir_Click(object sender, EventArgs e)
         {
-            if (!fValidarValor(out decimal valor))      return;
+            if (!fValidarValor(out decimal valor)) return;
             if (!fValidarContaDestino(out int destino)) return;
 
             cControlo oCtrl = new cControlo();
@@ -137,44 +145,6 @@ namespace Multibanco
                 fRefrescarEcra(frm.NovoSaldo);
         }
 
-        // Mostra o resultado de uma operação bancária e atualiza o ecrã se foi bem-sucedida.
-        // Reutilizado em btnLevantar_Click, btnDepositar_Click, btnTransferir_Click e btnMBWay_Click
-        // para evitar o bloco if/else com MessageBox duplicado em cada handler.
-        private void fMostrarResultado(cControlo oCtrl)
-        {
-            if (!oCtrl.operacao)
-                MessageBox.Show(oCtrl.mensagem, "ERRO", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            else
-            {
-                MessageBox.Show(oCtrl.mensagem, "Sucesso", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                fRefrescarEcra(oCtrl.saldoAtualizado);
-            }
-        }
-
-        // Valida o campo txtValor — tem de ser um número positivo
-        private bool fValidarValor(out decimal valor)
-        {
-            if (!decimal.TryParse(txtValor.Text.Replace(",", "."),
-                System.Globalization.NumberStyles.Any,
-                System.Globalization.CultureInfo.InvariantCulture,
-                out valor) || valor <= 0)
-            {
-                MessageBox.Show("Introduza um valor numérico válido e maior que zero.", "ERRO", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return false;
-            }
-            return true;
-        }
-
-        // Valida o campo txtContaDestino — tem de ser um número inteiro
-        private bool fValidarContaDestino(out int contaDestino)
-        {
-            if (!int.TryParse(txtContaDestino.Text, out contaDestino) || contaDestino <= 0)
-            {
-                MessageBox.Show("Introduza um número de conta destino válido.", "ERRO", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return false;
-            }
-            return true;
-        }
 
         // Botão "Filtrar" — aplica o filtro de datas ao histórico
         private void btnFiltrar_Click(object sender, EventArgs e)
@@ -213,16 +183,70 @@ namespace Multibanco
                 fRefrescarEcra(frm.NovoSaldo);
         }
 
-        // Tick do relógio — atualiza o label a cada segundo
-        private void tmrRelogio_Tick(object sender, EventArgs e)
-        {
-            lblRelogio.Text = DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss");
-        }
-
         // Botão "Sair" — fecha toda a aplicação
         private void btnSair_Click(object sender, EventArgs e)
         {
             Application.Exit();
         }
+
+
+        // ============= CAMPOS E CONSEQUENCIA DE AÇÕES REALIZADAS DIRETAMENTE NO FORM =============
+        //
+        // Existem ações como Levantamento, Depósito e Transferencia que são realizadas diretamente com dados do formlário.
+        // Outras ações como Pagamentos e MBWay, com formularios proprios, vao depois usar por exemplo o refrescar ecra.
+
+
+        // Validação de formato — verifica apenas se o campo contém um número parseável.
+        // A regra de negócio (valor > 0) fica no cControlo (fLevantar, fDepositar, fTransferir),
+        // para se aplicar independentemente do formulário que chamar a operação.
+        private bool fValidarValor(out decimal valor)
+        {
+            // form valida formato e campo vazio, mas não valida regra de negócio (valor > 0), que é feito no cControlo.
+            if (!decimal.TryParse(txtValor.Text.Replace(",", "."),
+                System.Globalization.NumberStyles.Any,
+                System.Globalization.CultureInfo.InvariantCulture,
+                out valor))
+            {
+                MessageBox.Show("Introduza um valor numérico válido.", "ERRO", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+            return true;
+        }
+
+        // Valida o campo txtContaDestino — tem de ser um número inteiro
+        private bool fValidarContaDestino(out int contaDestino)
+        {
+            if (!int.TryParse(txtContaDestino.Text, out contaDestino) || contaDestino <= 0)
+            {
+                MessageBox.Show("Introduza um número de conta destino válido.", "ERRO", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+            return true;
+        }
+
+        // Mostra o resultado de uma operação bancária e atualiza o ecrã se foi bem-sucedida.
+        // Reutilizado em btnLevantar_Click, btnDepositar_Click, btnTransferir_Click e btnMBWay_Click
+        // para evitar o bloco if/else com MessageBox duplicado em cada handler.
+        private void fMostrarResultado(cControlo oCtrl)
+        {
+            if (!oCtrl.operacao)
+                MessageBox.Show(oCtrl.mensagem, "ERRO", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            else
+            {
+                MessageBox.Show(oCtrl.mensagem, "Sucesso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                fRefrescarEcra(oCtrl.saldoAtualizado);
+            }
+        }
+
+        // Método auxiliar — ATUALIZAR SALDO no ecrã e recarrega os movimentos após operação
+        private void fRefrescarEcra(decimal novoSaldo)
+        {
+            _saldo = novoSaldo;
+            txtSaldo.Text = _saldo.ToString("F2") + " €";
+            fCarregarMovimentos();
+            txtValor.Text = ""; // limpar o campo de valor após operação
+            txtContaDestino.Text = ""; // limpar conta destino
+        }
+
     }
 }

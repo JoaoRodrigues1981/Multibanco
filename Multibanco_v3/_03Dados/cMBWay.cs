@@ -10,10 +10,6 @@ using Npgsql;
 
 namespace Multibanco._03Dados
 {
-    
-
-
-
     internal class cMBWay
     {
         public bool operacao = true; // true = operação bem sucedida, false = operação falhada como temos feito sempre

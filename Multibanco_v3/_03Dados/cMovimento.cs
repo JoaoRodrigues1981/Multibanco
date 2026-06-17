@@ -21,6 +21,72 @@ namespace Multibanco._03Dados
         cConexao oConexao = new cConexao();
 
         // ------------------------------------------------------------------
+        // Devolve os movimentos de uma conta, opcionalmente filtrados por datas.
+        // Se dataInicio ou dataFim forem null, não aplica esse limite.
+        // Resultado guardado em listaMovimentos para o formulário apresentar.
+        // ------------------------------------------------------------------
+        public bool fListarMovimentos(int contaId, DateTime? dataInicio, DateTime? dataFim)
+        {
+            listaMovimentos.Clear();
+
+            NpgsqlCommand oCmd = new NpgsqlCommand();
+            oCmd.Parameters.AddWithValue("@ContaId", contaId);
+
+            // Construir a query com os filtros de data opcionais
+            string sql = "SELECT Tipo, Valor, SaldoApos, DataHora, Descricao FROM Movimentos WHERE ContaId = @ContaId";
+
+            if (dataInicio.HasValue)
+            {
+                sql += " AND DataHora >= @DataInicio";
+                oCmd.Parameters.AddWithValue("@DataInicio", dataInicio.Value);
+            }
+
+            if (dataFim.HasValue)
+            {
+                sql += " AND DataHora <= @DataFim";
+                // O utilizador escolhe um dia (ex: 2026-06-17), que em C# começa às 00:00:00.
+                // Um movimento feito às 15:30 desse dia ficaria fora do filtro com <= @DataFim.
+                // AddDays(1).AddSeconds(-1) converte para 2026-06-17 23:59:59 — inclui o dia inteiro.
+                oCmd.Parameters.AddWithValue("@DataFim", dataFim.Value.AddDays(1).AddSeconds(-1));
+            }
+
+            sql += " ORDER BY DataHora DESC"; // mais recente primeiro
+            oCmd.CommandText = sql;
+
+            try
+            {
+                oCmd.Connection = oConexao.conectar();
+                NpgsqlDataReader oReader = oCmd.ExecuteReader();
+
+                // Cada chamada a Read() avança para a linha seguinte; quando não há mais, devolve false e o ciclo termina.
+                while (oReader.Read())
+                {
+                    // Cada linha da BD torna-se um array de 5 strings que o formulário vai apresentar diretamente.
+                    listaMovimentos.Add(new string[]
+                    {
+                        oReader.GetString(0),                                // coluna 0: Tipo ("L","D","T","P","M")
+                        oReader.GetDecimal(1).ToString("F2"),                // coluna 1: Valor (ex: "50.00")
+                        oReader.GetDecimal(2).ToString("F2"),                // coluna 2: SaldoApos (ex: "800.00")
+                        oReader.GetDateTime(3).ToString("yyyy-MM-dd HH:mm"), // coluna 3: DataHora formatada
+                        oReader.IsDBNull(4) ? "" : oReader.GetString(4)     // coluna 4: Descricao — IsDBNull evita exceção se o campo for null na BD
+                    });
+                }
+
+                oReader.Close();
+                oConexao.desConectar();
+                oCmd.Dispose();
+            }
+            catch (Exception ex)
+            {
+                operacao = false;
+                mensagem = "Erro ao listar movimentos: " + ex.Message;
+            }
+
+            return operacao;
+        }
+
+
+        // ------------------------------------------------------------------
         // Helper privado — elimina o boilerplate try/catch que se repetia em
         // fAtualizarSaldo e fInserirMovimento.
         // Centraliza abertura/fecho de ligação e tratamento de erros.
@@ -192,64 +258,6 @@ namespace Multibanco._03Dados
             return fExecutarNonQuery(oCmd, "Erro ao registar movimento: ");
         }
 
-        // ------------------------------------------------------------------
-        // Devolve os movimentos de uma conta, opcionalmente filtrados por datas.
-        // Se dataInicio ou dataFim forem null, não aplica esse limite.
-        // Resultado guardado em listaMovimentos para o formulário apresentar.
-        // ------------------------------------------------------------------
-        public bool fListarMovimentos(int contaId, DateTime? dataInicio, DateTime? dataFim)
-        {
-            listaMovimentos.Clear();
-
-            NpgsqlCommand oCmd = new NpgsqlCommand();
-            oCmd.Parameters.AddWithValue("@ContaId", contaId);
-
-            // Construir a query com os filtros de data opcionais
-            string sql = "SELECT Tipo, Valor, SaldoApos, DataHora, Descricao FROM Movimentos WHERE ContaId = @ContaId";
-
-            if (dataInicio.HasValue)
-            {
-                sql += " AND DataHora >= @DataInicio";
-                oCmd.Parameters.AddWithValue("@DataInicio", dataInicio.Value);
-            }
-
-            if (dataFim.HasValue)
-            {
-                sql += " AND DataHora <= @DataFim";
-                oCmd.Parameters.AddWithValue("@DataFim", dataFim.Value.AddDays(1).AddSeconds(-1)); // incluir o dia inteiro
-            }
-
-            sql += " ORDER BY DataHora DESC"; // mais recente primeiro
-            oCmd.CommandText = sql;
-
-            try
-            {
-                oCmd.Connection = oConexao.conectar();
-                NpgsqlDataReader oReader = oCmd.ExecuteReader();
-
-                while (oReader.Read())
-                {
-                    listaMovimentos.Add(new string[]
-                    {
-                        oReader.GetString(0),                              // Tipo
-                        oReader.GetDecimal(1).ToString("F2"),              // Valor
-                        oReader.GetDecimal(2).ToString("F2"),              // SaldoApos
-                        oReader.GetDateTime(3).ToString("yyyy-MM-dd HH:mm"), // DataHora
-                        oReader.IsDBNull(4) ? "" : oReader.GetString(4)   // Descricao (pode ser null)
-                    });
-                }
-
-                oReader.Close();
-                oConexao.desConectar();
-                oCmd.Dispose();
-            }
-            catch (Exception ex)
-            {
-                operacao = false;
-                mensagem = "Erro ao listar movimentos: " + ex.Message;
-            }
-
-            return operacao;
-        }
+        
     }
 }
