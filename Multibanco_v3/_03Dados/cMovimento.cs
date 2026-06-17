@@ -29,10 +29,11 @@ namespace Multibanco._03Dados
         {
             listaMovimentos.Clear();
 
-            NpgsqlCommand oCmd = new NpgsqlCommand();
+            // "using var" garante que oCmd.Dispose() corre automaticamente ao sair do método — mesmo que ocorra uma exceção dentro do try.
+            // Sem "using var", o Dispose() só corria no caminho sem erros.
+            using var oCmd = new NpgsqlCommand();
             oCmd.Parameters.AddWithValue("@ContaId", contaId);
 
-            // Construir a query com os filtros de data opcionais
             string sql = "SELECT Tipo, Valor, SaldoApos, DataHora, Descricao FROM Movimentos WHERE ContaId = @ContaId";
 
             if (dataInicio.HasValue)
@@ -50,18 +51,19 @@ namespace Multibanco._03Dados
                 oCmd.Parameters.AddWithValue("@DataFim", dataFim.Value.AddDays(1).AddSeconds(-1));
             }
 
-            sql += " ORDER BY DataHora DESC"; // mais recente primeiro
+            sql += " ORDER BY DataHora DESC";
             oCmd.CommandText = sql;
 
             try
             {
                 oCmd.Connection = oConexao.conectar();
-                NpgsqlDataReader oReader = oCmd.ExecuteReader();
+
+                // "using var" no reader garante que fecha automaticamente após o while, libertando o cursor antes de fecharmos a ligação
+                using var oReader = oCmd.ExecuteReader();
 
                 // Cada chamada a Read() avança para a linha seguinte; quando não há mais, devolve false e o ciclo termina.
                 while (oReader.Read())
                 {
-                    // Cada linha da BD torna-se um array de 5 strings que o formulário vai apresentar diretamente.
                     listaMovimentos.Add(new string[]
                     {
                         oReader.GetString(0),                                // coluna 0: Tipo ("L","D","T","P","M")
@@ -72,9 +74,7 @@ namespace Multibanco._03Dados
                     });
                 }
 
-                oReader.Close();
                 oConexao.desConectar();
-                oCmd.Dispose();
             }
             catch (Exception ex)
             {
@@ -90,6 +90,11 @@ namespace Multibanco._03Dados
         // Helper privado — elimina o boilerplate try/catch que se repetia em
         // fAtualizarSaldo e fInserirMovimento.
         // Centraliza abertura/fecho de ligação e tratamento de erros.
+        //
+        // Nota: oCmd é criado com "using var" pelo método que chama fExecutarNonQuery.
+        // Por isso não chamamos oCmd.Dispose() aqui — o "using var" do chamador
+        // garante que o Dispose() corre automaticamente ao sair do seu scope,
+        // mesmo que ocorra uma exceção.
         // ------------------------------------------------------------------
         private bool fExecutarNonQuery(NpgsqlCommand oCmd, string prefixoErro)
         {
@@ -98,7 +103,6 @@ namespace Multibanco._03Dados
                 oCmd.Connection = oConexao.conectar();
                 oCmd.ExecuteNonQuery();
                 oConexao.desConectar();
-                oCmd.Dispose();
             }
             catch (Exception ex)
             {
@@ -116,21 +120,19 @@ namespace Multibanco._03Dados
         {
             decimal saldo = -1; // valor sentinela — indica erro se não for substituído
 
-            NpgsqlCommand oCmd = new NpgsqlCommand();
+            using var oCmd = new NpgsqlCommand();
             oCmd.Parameters.AddWithValue("@Id", contaId);
             oCmd.CommandText = "SELECT Saldo FROM Credenciais WHERE Id = @Id";
 
             try
             {
                 oCmd.Connection = oConexao.conectar();
-                NpgsqlDataReader oReader = oCmd.ExecuteReader();
+                using var oReader = oCmd.ExecuteReader();
 
                 if (oReader.Read())
                     saldo = oReader.GetDecimal(0);
 
-                oReader.Close();
                 oConexao.desConectar();
-                oCmd.Dispose();
             }
             catch (Exception ex)
             {
@@ -149,23 +151,19 @@ namespace Multibanco._03Dados
         {
             bool mbway = false;
 
-            NpgsqlCommand oCmd = new NpgsqlCommand();
+            using var oCmd = new NpgsqlCommand();
             oCmd.Parameters.AddWithValue("@Id", contaId);
             oCmd.CommandText = "SELECT MBWay FROM Credenciais WHERE Id = @Id";
 
             try
             {
                 oCmd.Connection = oConexao.conectar();
-                NpgsqlDataReader oReader = oCmd.ExecuteReader();
+                using var oReader = oCmd.ExecuteReader();
 
                 if (oReader.Read())
-                
                     mbway = oReader.GetBoolean(0);
-                    //MessageBox.Show(Convert.ToString(mbway)); //control de variavel para testes
 
-                oReader.Close();
                 oConexao.desConectar();
-                oCmd.Dispose();
             }
             catch (Exception ex)
             {
@@ -187,10 +185,10 @@ namespace Multibanco._03Dados
         // ------------------------------------------------------------------
         public bool fObterContaDestino(int contaNum, out int idDestino, out decimal saldoDestino)
         {
-            idDestino     = -1;  // valor sentinela — indica que a conta não foi encontrada
-            saldoDestino  =  0;
+            idDestino    = -1;  // valor sentinela — indica que a conta não foi encontrada
+            saldoDestino =  0;
 
-            NpgsqlCommand oCmd = new NpgsqlCommand();
+            using var oCmd = new NpgsqlCommand();
             oCmd.Parameters.AddWithValue("@Conta", contaNum);
             // Uma única query devolve Id e Saldo — evita uma segunda viagem à BD
             oCmd.CommandText = "SELECT Id, Saldo FROM Credenciais WHERE Conta = @Conta";
@@ -198,7 +196,7 @@ namespace Multibanco._03Dados
             try
             {
                 oCmd.Connection = oConexao.conectar();
-                NpgsqlDataReader oReader = oCmd.ExecuteReader();
+                using var oReader = oCmd.ExecuteReader();
 
                 if (oReader.Read())
                 {
@@ -207,14 +205,11 @@ namespace Multibanco._03Dados
                 }
                 else
                 {
-                    // Conta com esse número não existe na BD
                     operacao = false;
                     mensagem = "Conta destino não encontrada.";
                 }
 
-                oReader.Close();
                 oConexao.desConectar();
-                oCmd.Dispose();
             }
             catch (Exception ex)
             {
@@ -231,7 +226,7 @@ namespace Multibanco._03Dados
         // ------------------------------------------------------------------
         public bool fAtualizarSaldo(int contaId, decimal novoSaldo)
         {
-            NpgsqlCommand oCmd = new NpgsqlCommand();
+            using var oCmd = new NpgsqlCommand();
             oCmd.Parameters.AddWithValue("@Id",    contaId);
             oCmd.Parameters.AddWithValue("@Saldo", novoSaldo);
             oCmd.CommandText = "UPDATE Credenciais SET Saldo = @Saldo WHERE Id = @Id";
@@ -246,7 +241,7 @@ namespace Multibanco._03Dados
         // ------------------------------------------------------------------
         public bool fInserirMovimento(int contaId, string tipo, decimal valor, decimal saldoApos, string descricao)
         {
-            NpgsqlCommand oCmd = new NpgsqlCommand();
+            using var oCmd = new NpgsqlCommand();
             oCmd.Parameters.AddWithValue("@ContaId",   contaId);
             oCmd.Parameters.AddWithValue("@Tipo",      tipo);
             oCmd.Parameters.AddWithValue("@Valor",     valor);
@@ -257,7 +252,5 @@ namespace Multibanco._03Dados
 
             return fExecutarNonQuery(oCmd, "Erro ao registar movimento: ");
         }
-
-        
     }
 }

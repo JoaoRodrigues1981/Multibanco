@@ -81,18 +81,18 @@ namespace Multibanco
 
         // Método auxiliar - CONVERSOR DE TIPO DE MOVIMENTO — converte o tipo de movimento do banco (D, C, T, P) para uma descrição legível.
         // Usado dentro do fCarregarMovimentos para mostrar o tipo de movimento na ListView.
-        private string fTraduzirTipo(string tipo)
+        // Switch expression (C# 8+): forma moderna do switch — mais compacta, mesmo resultado.
+        // "D" => "Depósito"  equivale a  case "D": return "Depósito";
+        // _ => tipo          equivale a  default: return tipo;  (_ significa "qualquer outro caso")
+        private string fTraduzirTipo(string tipo) => tipo switch
         {
-            switch (tipo)
-            {
-                case "D": return "Depósito";
-                case "L": return "Levantamento";
-                case "T": return "Transferência";
-                case "P": return "Pagamento";
-                case "M": return "MBWay";
-                default:  return tipo;
-            }
-        }
+            "D" => "Depósito",
+            "L" => "Levantamento",
+            "T" => "Transferência",
+            "P" => "Pagamento",
+            "M" => "MBWay",
+            _   => tipo
+        };
 
         // Tick do relógio — atualiza o label a cada segundo
         private void tmrRelogio_Tick(object sender, EventArgs e)

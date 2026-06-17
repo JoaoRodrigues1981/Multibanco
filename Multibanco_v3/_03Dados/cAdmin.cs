@@ -27,6 +27,11 @@ namespace Multibanco._03Dados
         // Cada método público fica focado apenas na sua query; a mecânica de
         // abertura/fecho de ligação fica centralizada aqui.
         // prefixoErro é prefixado à mensagem de exceção para facilitar diagnóstico.
+        //
+        // Nota: oCmd é criado com "using var" pelo método que chama fExecutarNonQuery.
+        // Por isso não chamamos oCmd.Dispose() aqui — o "using var" do chamador
+        // garante que o Dispose() corre automaticamente ao sair do seu scope,
+        // mesmo que ocorra uma exceção.
         // ------------------------------------------------------------------
         private bool fExecutarNonQuery(NpgsqlCommand oCmd, string prefixoErro)
         {
@@ -35,7 +40,6 @@ namespace Multibanco._03Dados
                 oCmd.Connection = oConexao.conectar();
                 oCmd.ExecuteNonQuery();
                 oConexao.desConectar();
-                oCmd.Dispose();
             }
             catch (Exception ex)
             {
@@ -53,17 +57,22 @@ namespace Multibanco._03Dados
         {
             listaCredenciais.Clear(); // limpar resultados de chamadas anteriores
 
-            NpgsqlCommand oCmd = new NpgsqlCommand();
+            // "using var" garante que oCmd.Dispose() corre automaticamente ao sair
+            // do método — mesmo que ocorra uma exceção dentro do try.
+            // Sem "using var", o Dispose() só corria no caminho sem erros.
+            using var oCmd = new NpgsqlCommand();
             oCmd.CommandText = "SELECT Id, Banco, Cliente, Conta, Saldo, MBWay, Bloqueada FROM Credenciais ORDER BY Cliente, Conta";
 
             try
             {
                 oCmd.Connection = oConexao.conectar();
-                NpgsqlDataReader oReader = oCmd.ExecuteReader();
+
+                // "using var" no reader garante que fecha automaticamente após o while,
+                // libertando o cursor antes de fecharmos a ligação
+                using var oReader = oCmd.ExecuteReader();
 
                 while (oReader.Read()) // percorrer linha a linha
                 {
-                    // Guardar cada linha como array de strings para o formulário apresentar
                     listaCredenciais.Add(new string[]
                     {
                         oReader.GetInt32(0).ToString(),        // Id
@@ -76,10 +85,7 @@ namespace Multibanco._03Dados
                     });
                 }
 
-                oReader.Close();
                 oConexao.desConectar();
-                oCmd.Dispose();
-
                 mensagem = listaCredenciais.Count + " cliente(s) encontrado(s).";
             }
             catch (Exception ex)
@@ -97,7 +103,7 @@ namespace Multibanco._03Dados
         // ------------------------------------------------------------------
         public bool fInserirCredencial(string banco, string cliente, string conta, string pin)
         {
-            NpgsqlCommand oCmd = new NpgsqlCommand();
+            using var oCmd = new NpgsqlCommand();
             oCmd.Parameters.AddWithValue("@Banco",   banco);
             oCmd.Parameters.AddWithValue("@Cliente", cliente);
             oCmd.Parameters.AddWithValue("@Conta",   Convert.ToInt32(conta));
@@ -107,9 +113,28 @@ namespace Multibanco._03Dados
 
             oCmd.CommandText = "INSERT INTO Credenciais (Banco, Cliente, Conta, Pin, Saldo) VALUES (@Banco, @Cliente, @Conta, @Pin, @Saldo)";
 
-            // Erro mais comum: número de conta já existe (UNIQUE constraint)
-            if (fExecutarNonQuery(oCmd, "Erro ao inserir cliente: "))
+            // Não usamos fExecutarNonQuery aqui porque precisamos de distinguir o erro 23505
+            // (conta duplicada) do erro genérico de BD — para mostrar uma mensagem clara ao utilizador.
+            try
+            {
+                oCmd.Connection = oConexao.conectar();
+                oCmd.ExecuteNonQuery();
+                oConexao.desConectar();
                 mensagem = "Cliente inserido com sucesso. Saldo inicial: 100,00€.";
+            }
+            catch (PostgresException ex) when (ex.SqlState == "23505")
+            {
+                // 23505 = UNIQUE violation — número de conta já existe na BD
+                operacao = false;
+                mensagem = "Já existe uma conta com o número " + conta + ". Escolha outro número de conta.";
+                oConexao.desConectar();
+            }
+            catch (Exception ex)
+            {
+                operacao = false;
+                mensagem = "Erro ao inserir cliente: " + ex.Message;
+                oConexao.desConectar();
+            }
 
             return operacao;
         }
@@ -124,9 +149,9 @@ namespace Multibanco._03Dados
         // ------------------------------------------------------------------
         public bool fAlternarMBWay(int id, bool novoEstado)
         {
-            NpgsqlCommand oCmd = new NpgsqlCommand();
-            oCmd.Parameters.AddWithValue("@Id",     id);
-            oCmd.Parameters.AddWithValue("@MBWay",  novoEstado);
+            using var oCmd = new NpgsqlCommand();
+            oCmd.Parameters.AddWithValue("@Id",    id);
+            oCmd.Parameters.AddWithValue("@MBWay", novoEstado);
             oCmd.CommandText = "UPDATE Credenciais SET MBWay = @MBWay WHERE Id = @Id";
 
             if (fExecutarNonQuery(oCmd, "Erro ao alterar MBWay: "))
@@ -138,10 +163,29 @@ namespace Multibanco._03Dados
         // ------------------------------------------------------------------
         // Elimina uma conta de Credenciais pelo seu Id.
         // Só deve ser chamado após confirmar que o saldo é 0 (validação no cControlo).
+        //
+        // PORQUÊ dois DELETEs em vez de um?
+        // A tabela Movimentos tem uma chave estrangeira (FK):
+        //   Movimentos.ContaId → Credenciais.Id
+        // Isso significa que cada movimento "pertence" a uma conta.
+        // O PostgreSQL não permite apagar uma linha de Credenciais enquanto
+        // existirem linhas em Movimentos que a referenciam — daria erro 23503
+        // (foreign key violation).
+        // Solução: apagar primeiro os movimentos da conta, depois a conta.
         // ------------------------------------------------------------------
         public bool fEliminarCredencial(int id)
         {
-            NpgsqlCommand oCmd = new NpgsqlCommand();
+            // PASSO 1 — apagar o histórico de movimentos da conta
+            // Tem de ser feito ANTES de apagar a conta por causa da FK
+            using var oCmdMov = new NpgsqlCommand();
+            oCmdMov.Parameters.AddWithValue("@Id", id);
+            oCmdMov.CommandText = "DELETE FROM Movimentos WHERE ContaId = @Id";
+
+            if (!fExecutarNonQuery(oCmdMov, "Erro ao eliminar movimentos: "))
+                return operacao; // se falhou aqui, não tenta apagar a conta
+
+            // PASSO 2 — apagar a conta (só chega aqui se o passo 1 correu bem)
+            using var oCmd = new NpgsqlCommand();
             oCmd.Parameters.AddWithValue("@Id", id);
             oCmd.CommandText = "DELETE FROM Credenciais WHERE Id = @Id";
 
@@ -157,7 +201,7 @@ namespace Multibanco._03Dados
         // ------------------------------------------------------------------
         public bool fDesbloquearConta(int id)
         {
-            NpgsqlCommand oCmd = new NpgsqlCommand();
+            using var oCmd = new NpgsqlCommand();
             oCmd.Parameters.AddWithValue("@Id", id);
             oCmd.CommandText = "UPDATE Credenciais SET Tentativas = 0, Bloqueada = FALSE WHERE Id = @Id";
 

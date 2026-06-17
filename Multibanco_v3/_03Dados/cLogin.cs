@@ -155,7 +155,11 @@ namespace Multibanco._03Dados
                         int tentativas = oReaderTentativas.GetInt32(0);
                         if (tentativas >= 3)
                         {
-                            // Bloquear a conta
+                            // Fechar reader e ligação antes de abrir nova ligação para o UPDATE de bloqueio
+                            oReaderTentativas.Close();
+                            oConexao.desConectar();
+                            oCmdVerificarTentativas.Dispose();
+
                             NpgsqlCommand oCmdBloquear = new NpgsqlCommand();
                             oCmdBloquear.Parameters.AddWithValue("@Conta", Convert.ToInt32(txtConta));
                             oCmdBloquear.CommandText = "UPDATE Credenciais SET Bloqueada = TRUE WHERE Conta = @Conta";
@@ -164,6 +168,7 @@ namespace Multibanco._03Dados
                             oConexao.desConectar();
                             oCmdBloquear.Dispose();
                             mensagem = "Conta bloqueada após 3 tentativas. Contacte o administrador.";
+                            return operacao; // reader e ligação já fechados acima — saída antecipada
                         }
                         else
                         {
@@ -173,18 +178,6 @@ namespace Multibanco._03Dados
                     oReaderTentativas.Close();
                     oConexao.desConectar();
                     oCmdVerificarTentativas.Dispose();
-                }
-                {
-                    NpgsqlCommand oCmdTent = new NpgsqlCommand();
-                    oCmdTent.Parameters.AddWithValue("@Conta", Convert.ToInt32(txtConta));
-                    oCmdTent.CommandText = @"UPDATE Credenciais 
-                                                    SET Tentativas = Tentativas + 1,
-                                                    Bloqueada  = CASE WHEN Tentativas + 1 >= 3 THEN TRUE ELSE Bloqueada END 
-                                                    WHERE Conta = @Conta";
-                    oCmdTent.Connection = oConexao.conectar();
-                    oCmdTent.ExecuteNonQuery();
-                    oConexao.desConectar();
-                    oCmdTent.Dispose();
                 }
             }
             catch (Exception ex) // erro técnico: BD não responde, password errada, etc.

@@ -22,8 +22,10 @@ namespace Multibanco._02Controlo
         public string  cliente  = "";     // Nome do cliente
         public int     conta    = 0;      // Número de conta
 
-        
-        
+        // Saldo atualizado após operação — o formulário usa para refrescar o ecrã
+        public decimal saldoAtualizado = 0;
+
+
         // ======== LISTAS ========
 
         // Lista de clientes devolvida por fListarCredenciais — lida pelo frmAdmin
@@ -138,12 +140,8 @@ namespace Multibanco._02Controlo
         }
 
 
-
         // ========= METODOS DE OPERAÇÕES BANCÁRIAS (cliente realiza diretamente no frmMultibanco) ==========
-
-        // Saldo atualizado após operação — o formulário usa para refrescar o ecrã
-        public decimal saldoAtualizado = 0;
-
+                
         // LAVANTAMENTO
         // Vai usar metodos auxiliares (helper): fSaldoSuficiente para validar se o cliente tem saldo suficiente para o levantamento.
 
